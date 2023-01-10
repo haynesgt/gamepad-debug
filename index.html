@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<!-- Simple index.html with in-browser jsx compilation -->
+<head>
+<title>App</title>
+<script src="https://unpkg.com/lodash@4.17.21" crossorigin></script>
+<script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-bootstrap@1.5.2/dist/react-bootstrap.js" crossorigin></script>
+<script src="https://unpkg.com/react-router-dom@5.2.0/umd/react-router-dom.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<!-- Useful things
+https://github.com/johndiiorio/react-useinterval/blob/master/src/index.tsx
+https://github.com/dance2die/react-use-localstorage/blob/master/src/index.ts
+-->
+<!-- no 404 request for icon -->
+<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+<link href="https://getbootstrap.com/docs/4.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+<style>
+</style>
+</head>
+<body style='padding: 16px'>
+<div id="app"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+const { HashRouter, Link, Route, useRouteMatch } = ReactRouterDOM;
+const { Dropdown } = ReactBootstrap;
+
+const formatDigits = 8;
+
+const axisValueFormat = new Intl.NumberFormat('en-IN', {
+  signDisplay: 'always',
+  minimumFractionDigits: formatDigits,
+  maximumFractionDigits: formatDigits
+});
+
+const btnValueFormat = new Intl.NumberFormat('en-IN', {
+  minimumFractionDigits: formatDigits,
+  maximumFractionDigits: formatDigits
+});
+
+const app = document.getElementById("app");
+function App() {
+  const [ selectedGamepadIndex, setSelectedGamepadIndex ] = useState(0);
+  const [ gamepads, setGamepads ] = useState([]);
+  function update() {
+	setGamepads(navigator.getGamepads());
+  }
+  useEffect(() => {
+	let timeout;
+	function step() {
+	  update();
+	  timeout = setTimeout(step, 1);
+	}
+	step();
+	return () => clearTimeout(timeout);
+  }, []);
+  const gamepad = gamepads[selectedGamepadIndex];
+  return (
+    <div>
+	<select onChange={(e) => setSelectedGamepadIndex(parseInt(e.target.value))}>
+	{
+	  gamepads.map((gamepad, i) => <option key={i} value={i}>{gamepad?.id || "null (move a control)"}</option>)
+	}
+	</select>
+	{
+	  gamepad && <div>
+		<h1>Axes</h1>
+		<div style={{fontFamily: 'monospace'}}>
+		{
+		gamepad.axes.map((axisValue, i) => <div key={i}>
+		  <label style={{width: '32px', textAlign: 'right', 'marginBottom': '0px'}}>
+		  {i}
+		  </label>: {axisValueFormat.format(axisValue)}
+		</div>)
+		}
+		</div>
+		<h1>Buttons</h1>
+		<div>(touched pressed value)</div>
+		<div style={{fontFamily: 'monospace'}}>
+		{
+		gamepad.buttons.map((btn, i) => <div key={i}>
+		  <label style={{width: '32px', textAlign: 'right', 'marginBottom': '0px'}}>
+		  {i}
+		  </label>:
+		  {' '}
+		  {btn.touched ? '1' : '0'}
+		  {' '}
+		  {btn.pressed ? '1' : '0'}
+		  {' '}
+		  {btnValueFormat.format(btn.value)}
+		</div>)
+		}
+		</div>
+		<h1>Raw</h1>
+		<pre>
+		{
+		  (() => {
+			const replacer = (_k, x) =>
+			  x instanceof Object ?
+				x.__proto__.constructor === Object ?
+				  x :
+				  x instanceof Array ?
+					x.map((xx, i) => replacer(i, xx)) :
+					Object.fromEntries(Object.keys(x.__proto__).map(k => [k, replacer(k, x[k])])) :
+				x;
+			return JSON.stringify(gamepad, replacer, 2)
+		  })()
+		}
+		</pre>
+	  </div>
+	}
+    </div>
+  )
+}
+ReactDOM.render(React.createElement(App), document.getElementById("app"))
+</script>
+</body>
+</html>
+
